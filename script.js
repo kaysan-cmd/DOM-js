@@ -1,98 +1,475 @@
-//Data buku yang tersedia di perpustakaan
-const koleksiBuku = [
-  {
-    id: 1,
-    judul: "Bumi Manusia",
-    penulis: "Pramoedya Ananta Toer",
-    dipinjam: false,
-  },
-  {
-    id: 2,
-    judul: "Hujan",
-    penulis: "Tere Liye",
-    dipinjam: false,
-  },
-  {
-    id: 3,
-    judul: "Dilan 1990",
-    penulis: "Pidi Baiq",
-    dipinjam: true,
-  },
+//
+
+// DATA & STATE
+
+//
+
+const KOLEKSI_BUKU = [
+  { id: 1, judul: "Laskar Pelangi", penulis: "Andrea Hirata", kategori: "Fiksi", stok: 3, rating: 4.8, favorit: false },
+
+  { id: 2, judul: "Bumi Manusia", penulis: "Pramoedya Ananta Toer", kategori: "Fiksi", stok: 0, rating: 4.9, favorit: false },
+
+  { id: 3, judul: "Sapiens", penulis: "Yuval Noah Harari", kategori: "Sains", stok: 2, rating: 4.7, favorit: false },
+
+  { id: 4, judul: "Atomic Habits", penulis: "James Clear", kategori: "Non-fiksi", stok: 5, rating: 4.6, favorit: false },
+
+  { id: 5, judul: "Negeri 5 Menara", penulis: "Ahmad Fuadi", kategori: "Fiksi", stok: 1, rating: 4.5, favorit: false },
+
+  { id: 6, judul: "Deep Work", penulis: "Cal Newport", kategori: "Non-fiksi", stok: 0, rating: 4.4, favorit: false },
+
+  { id: 7, judul: "A Brief History of Time", penulis: "Stephen Hawking", kategori: "Sains", stok: 3, rating: 4.6, favorit: false },
+
+  { id: 8, judul: "Pulang", penulis: "Tere Liye", kategori: "Fiksi", stok: 2, rating: 4.3, favorit: false },
 ];
 
-// =====================================================
-// 1. Mengambil elemen dengan querySelector
-// =====================================================
+let state = {
+  buku: KOLEKSI_BUKU.map((buku) => ({ ...buku })),
 
-const namaPerpus = document.querySelector("#nama-perpus");
-const koleksiEl = document.querySelector("#koleksi-buku");
-const jumlahBukuEl = document.querySelector("#jumlah-buku");
-const gambarCover = document.querySelector("#gambar-cover");
+  kategori: "Semua",
 
-// =====================================================
-// 2. textContent dan innerHTML
-// =====================================================
+  keyword: "",
+};
 
-// Menampilkan jumlah buku
-jumlahBukuEl.textContent = `Jumlah Buku: ${koleksiBuku.length}`;
+//
 
-// Membuat daftar buku
-let daftarHTML = "";
+// UTILITY & LOGIKA
 
-koleksiBuku.forEach((buku) => {
-  daftarHTML += `
-        <div class="buku-card" data-id="${buku.id}">
-            <h3 class="nama-buku">${buku.judul}</h3>
-            <p>Penulis: ${buku.penulis}</p>
-            <button class="tombol-pinjam">Pinjam Buku</button>
-        </div>
-    `;
-});
+//
 
-koleksiEl.innerHTML = daftarHTML;
+function ambilKategori(koleksi) {
+  const kategoriSet = new Set(koleksi.map((b) => b.kategori));
 
-// Mengambil semua kartu dan tombol
-const kartuBuku = document.querySelectorAll(".buku-card");
-const tombolPinjam = document.querySelectorAll(".tombol-pinjam");
+  return ["Semua", ...kategoriSet];
+}
 
-// Contoh innerText
-console.log("Nama perpustakaan:", namaPerpus.innerText);
+function filterGabungan(koleksi, kategori, keyword) {
+  let hasil = kategori === "Semua" ? koleksi : koleksi.filter((b) => b.kategori === kategori);
 
-// =====================================================
-// 3. Manipulasi atribut, class dan style
-// =====================================================
+  if (!keyword.trim()) return hasil;
 
-tombolPinjam.forEach((tombol, index) => {
-  const buku = koleksiBuku[index];
-  const kartu = kartuBuku[index];
+  const kw = keyword.trim().toLowerCase();
 
-  // Jika buku sudah dipinjam
-  if (buku.dipinjam === true) {
-    tombol.setAttribute("disabled", true);
-    tombol.textContent = "Sedang Dipinjam";
-    kartu.classList.add("sedang-dipinjam");
+  return hasil.filter((b) => b.judul.toLowerCase().includes(kw) || b.penulis.toLowerCase().includes(kw));
+}
+
+function highlightKeyword(teks, keyword) {
+  if (!keyword.trim()) return teks;
+
+  const kwEscaped = keyword.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+  const regex = new RegExp(`(${kwEscaped})`, "gi");
+
+  return teks.replace(regex, '<span class="highlight">$1</span>');
+}
+
+function debounce(fn, delay) {
+  let timer;
+
+  return function (...args) {
+    clearTimeout(timer);
+
+    timer = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
+
+function hitungStatistik(koleksi) {
+  const total = koleksi.length;
+
+  const tersedia = koleksi.filter((b) => b.stok > 0).length;
+
+  const habis = total - tersedia;
+
+  const rataRating = total > 0 ? koleksi.reduce((acc, b) => acc + b.rating, 0) / total : 0;
+
+  return { total, tersedia, habis, rataRating };
+}
+
+// Logika Interaksi Favorit
+
+function toggleFavorit(id, elemenTombol) {
+  const buku = state.buku.find((b) => b.id === id);
+
+  if (!buku) return;
+
+  buku.favorit = !buku.favorit;
+
+  const kartu = elemenTombol.closest(".kartu-buku");
+
+  if (buku.favorit) {
+    elemenTombol.classList.add("aktif");
+
+    elemenTombol.textContent = "❤️";
+
+    kartu.classList.add("favorit");
+  } else {
+    elemenTombol.classList.remove("aktif");
+
+    elemenTombol.textContent = "🤍";
+
+    kartu.classList.remove("favorit");
   }
 
-  // Ketika tombol ditekan
-  tombol.addEventListener("click", function () {
-    // Menampilkan src gambar sebelumnya
-    console.log("Cover sebelumnya:", gambarCover.getAttribute("src"));
+  renderStatistik();
+}
 
-    // Mengganti gambar cover
-    gambarCover.setAttribute("src", `https://via.placeholder.com/120x150?text=${buku.judul}`);
+function hapusSemuaFavorit() {
+  state.buku = state.buku.map((b) => ({ ...b, favorit: false }));
 
-    gambarCover.setAttribute("alt", `Cover buku ${buku.judul}`);
+  reRender();
+}
 
-    // Memberikan perubahan visual pada kartu
-    kartu.style.backgroundColor = "#ffe1e1";
-    kartu.style.border = "2px solid #e05555";
-    kartu.style.transform = "scale(0.98)";
+//
 
-    // Mengubah status tombol
-    tombol.setAttribute("disabled", true);
-    tombol.textContent = "Sudah Dipinjam";
+// FUNGSI RENDER
 
-    // Mengubah informasi di halaman
-    jumlahBukuEl.textContent = `"${buku.judul}" sedang dipinjam`;
+//
+
+function renderStatistik() {
+  const { total, tersedia, habis, rataRating } = hitungStatistik(state.buku);
+
+  const jumlahFavorit = state.buku.filter((b) => b.favorit).length;
+
+  const kartuData = [
+    { angka: total, label: "Total Buku", warna: "biru" },
+
+    { angka: tersedia, label: "Tersedia", warna: "hijau" },
+
+    { angka: habis, label: "Habis", warna: "merah" },
+
+    { angka: rataRating.toFixed(1), label: "Rata-rata", warna: "kuning" },
+
+    { angka: jumlahFavorit, label: "Favorit", warna: "biru" },
+  ];
+
+  const kontainer = document.getElementById("ringkasan-statistik");
+
+  kontainer.innerHTML = kartuData
+    .map(
+      (k) => `
+
+    <div class="kartu-statistik statistik-${k.warna}">
+
+      <span class="statistik-angka">${k.angka}</span>
+
+      <span class="statistik-label">${k.label}</span>
+
+    </div>
+
+  `,
+    )
+    .join("");
+
+  if (jumlahFavorit > 0) {
+    kontainer.innerHTML += `
+
+      <div style="width: 100%; text-align: right; margin-top: 10px; grid-column: 1/-1;">
+
+        <button onclick="hapusSemuaFavorit()" style="padding: 6px 14px; cursor: pointer; color: #EE5D50; background: #FEEDED; border: none; border-radius: 8px; font-weight: 600;">
+
+          Hapus Semua Favorit
+
+        </button>
+
+      </div>
+
+    `;
+  }
+}
+
+function renderTombolFilter() {
+  const kategoriList = ambilKategori(state.buku);
+
+  const kontainer = document.getElementById("tombol-filter");
+
+  kontainer.innerHTML = kategoriList
+    .map(
+      (kat) => `
+
+    <button class="tombol-filter ${kat === state.kategori ? "aktif" : ""}" data-kategori="${kat}">
+
+      ${kat}
+
+    </button>
+
+  `,
+    )
+    .join("");
+}
+
+function renderDaftarBuku() {
+  const hasilFilter = filterGabungan(state.buku, state.kategori, state.keyword);
+
+  const kontainer = document.getElementById("kontainer-buku");
+
+  const infoJumlah = document.getElementById("info-jumlah");
+
+  const filterAktif = [];
+
+  if (state.kategori !== "Semua") filterAktif.push(`kategori: "${state.kategori}"`);
+
+  if (state.keyword.trim()) filterAktif.push(`kata kunci: "${state.keyword.trim()}"`);
+
+  const infoFilter = filterAktif.length > 0 ? ` (filter: ${filterAktif.join(", ")})` : "";
+
+  if (hasilFilter.length === 0) {
+    kontainer.innerHTML = `
+
+      <div class="pesan-kosong">
+
+        <span class="pesan-kosong-ikon">📚</span>
+
+        <p>Tidak ada buku yang cocok${infoFilter}</p>
+
+      </div>
+
+    `;
+
+    infoJumlah.textContent = `0 buku ditemukan${infoFilter}`;
+
+    return;
+  }
+
+  kontainer.innerHTML = hasilFilter
+    .map((buku) => {
+      const tersedia = buku.stok > 0;
+
+      const kelasKartu = ["kartu-buku", tersedia ? "" : "habis", buku.favorit ? "favorit" : ""].filter(Boolean).join(" ");
+
+      const badgeStokKelas = tersedia ? "badge-stok-tersedia" : "badge-stok-habis";
+
+      const badgeStokTeks = tersedia ? `${buku.stok} tersisa` : "Habis";
+
+      const tambahanStokKritis = buku.stok === 1 ? `<span style="background-color: #FFCE20; color: #2b3674; padding: 6px 14px; border-radius: 12px; font-size: 12px; font-weight: 700; letter-spacing: 0.3px;">Stok Kritis</span>` : "";
+
+      const judulTampil = highlightKeyword(buku.judul, state.keyword);
+
+      const penulisTampil = highlightKeyword(buku.penulis, state.keyword);
+
+      const ikonFavorit = buku.favorit ? "❤️" : "🤍";
+
+      return `
+
+      <div class="${kelasKartu}" data-id="${buku.id}">
+
+        <div class="kartu-header">
+
+          <h3 class="kartu-judul-buku">${judulTampil}</h3>
+
+          <button class="tombol-favorit ${buku.favorit ? "aktif" : ""}" data-id="${buku.id}">${ikonFavorit}</button>
+
+        </div>
+
+        <p class="kartu-penulis-buku">${penulisTampil}</p>
+
+        <div class="kartu-meta">
+
+          <span class="badge-kategori">${buku.kategori}</span>
+
+          <span class="${badgeStokKelas}">${badgeStokTeks}</span>
+
+          ${tambahanStokKritis}
+
+          <span class="kartu-rating">${buku.rating}</span>
+
+        </div>
+
+        <!-- Tambahan Tombol Aksi dari kode lama -->
+
+        <div class="kartu-aksi">
+
+          <button class="tombol-aksi tombol-pinjam" data-id="${buku.id}" ${tersedia ? "" : "disabled"}>Pinjam</button>
+
+          <button class="tombol-aksi tombol-detail" data-id="${buku.id}">Detail</button>
+
+        </div>
+
+      </div>
+
+    `;
+    })
+    .join("");
+
+  infoJumlah.textContent = `Menampilkan ${hasilFilter.length} buku${infoFilter}`;
+}
+
+// Logika Menampilkan Detail (dari kode lama)
+
+function tampilkanDetailBuku(id) {
+  const buku = state.buku.find((b) => b.id === id);
+
+  const panel = document.getElementById("panel-detail");
+
+  if (!buku || !panel) return;
+
+  let btnKembalikan = "";
+
+  if (buku.stok === 0) {
+    btnKembalikan = `<button id="btn-kembalikan" class="tombol-aksi" style="background:#E6FAF5; color:#05CD99; border:1.5px solid #05CD99; padding:10px 20px; max-width:200px;">Kembalikan Buku</button>`;
+  }
+
+  panel.innerHTML = `
+
+    <h2>${buku.judul}</h2>
+
+    <p><strong>Penulis:</strong> ${buku.penulis}</p>
+
+    <p><strong>Kategori:</strong> ${buku.kategori}</p>
+
+    <p><strong>Stok:</strong> ${buku.stok === 0 ? "Habis" : buku.stok + " eksemplar"}</p>
+
+    <p><strong>Rating:</strong> ${buku.rating} ⭐</p>
+
+    
+
+    <div style="margin-top: 24px; display: flex; gap: 12px;">
+
+      ${btnKembalikan}
+
+      <button id="btn-tutup-detail" class="tombol-aksi" style="background:#FEEDED; color:#EE5D50; border:1.5px solid #EE5D50; padding:10px 20px; max-width: 150px;">✖ Tutup</button>
+
+    </div>
+
+  `;
+
+  panel.hidden = false;
+
+  panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+
+  document.getElementById("btn-tutup-detail").addEventListener("click", () => {
+    panel.hidden = true;
+
+    document.querySelectorAll(".kartu-buku.dipilih").forEach((k) => k.classList.remove("dipilih"));
   });
-});
+
+  if (buku.stok === 0) {
+    document.getElementById("btn-kembalikan").addEventListener("click", () => {
+      buku.stok += 1;
+
+      reRender();
+
+      tampilkanDetailBuku(id); // Render ulang panel untuk update stok
+    });
+  }
+}
+
+function reRender() {
+  renderStatistik();
+
+  renderTombolFilter();
+
+  renderDaftarBuku();
+}
+
+//
+
+// EVENT HANDLING & INISIALISASI
+
+//
+
+function inisialisasi() {
+  // Event Kategori
+
+  document.getElementById("tombol-filter").addEventListener("click", function (event) {
+    const tombol = event.target.closest(".tombol-filter");
+
+    if (!tombol) return;
+
+    state.kategori = tombol.dataset.kategori;
+
+    reRender();
+  });
+
+  // Event Delegasi di Kontainer Buku (Gabungan Logika)
+
+  const grid = document.getElementById("kontainer-buku");
+
+  grid.addEventListener("click", function (event) {
+    // 1. Tombol favorit
+
+    const tombolFavorit = event.target.closest(".tombol-favorit");
+
+    if (tombolFavorit) {
+      toggleFavorit(Number(tombolFavorit.dataset.id), tombolFavorit);
+
+      return;
+    }
+
+    // 2. Tombol pinjam (dari kode lama)
+
+    const tombolPinjam = event.target.closest(".tombol-pinjam");
+
+    if (tombolPinjam && !tombolPinjam.disabled) {
+      const id = Number(tombolPinjam.dataset.id);
+
+      const buku = state.buku.find((b) => b.id === id);
+
+      if (buku && buku.stok > 0) {
+        buku.stok -= 1;
+
+        reRender();
+
+        // Update detail panel jika sedang terbuka untuk buku yang sama
+
+        const panel = document.getElementById("panel-detail");
+
+        if (!panel.hidden && panel.querySelector("h2").textContent === buku.judul) {
+          tampilkanDetailBuku(id);
+        }
+      }
+
+      return;
+    }
+
+    // 3. Tombol detail (dari kode lama)
+
+    const tombolDetail = event.target.closest(".tombol-detail");
+
+    if (tombolDetail) {
+      const id = Number(tombolDetail.dataset.id);
+
+      grid.querySelectorAll(".kartu-buku.dipilih").forEach((k) => k.classList.remove("dipilih"));
+
+      tombolDetail.closest(".kartu-buku").classList.add("dipilih");
+
+      tampilkanDetailBuku(id);
+
+      return;
+    }
+  });
+
+  // Event Pencarian (Search)
+
+  const inputSearch = document.getElementById("input-search");
+
+  const tombolHapus = document.getElementById("tombol-hapus-search");
+
+  const handleSearch = debounce(function () {
+    state.keyword = inputSearch.value;
+
+    tombolHapus.style.display = state.keyword ? "block" : "none";
+
+    reRender();
+  }, 300);
+
+  inputSearch.addEventListener("input", handleSearch);
+
+  tombolHapus.addEventListener("click", function () {
+    inputSearch.value = "";
+
+    this.style.display = "none";
+
+    inputSearch.focus();
+
+    state.keyword = "";
+
+    reRender();
+  });
+
+  // Render Awal
+
+  reRender();
+
+  console.log("Perpus siap - Semua fungsionalitas dan UI tergabung dengan sukses!");
+}
+
+inisialisasi();

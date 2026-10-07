@@ -2,94 +2,389 @@
 <html lang="id">
   <head>
     <meta charset="UTF-8" />
-    <title>Mini Library - DOM</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DOM Library</title>
 
     <style>
-      /* Tampilan dasar halaman */
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
       body {
-        font-family: Arial, sans-serif;
-        padding: 20px;
-        background-color: #eef4f8;
-        color: #333;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        padding: 24px;
+        background-color: #f4f7fe;
+        color: #2b3674;
+        max-width: 1100px;
+        margin: 0 auto;
       }
 
-      /* Judul utama */
+      /* Header */
       #nama-perpus {
-        color: #3f759b;
-        margin-bottom: 5px;
-      }
-
-      /* Informasi jumlah buku */
-      #jumlah-buku {
-        color: #666;
+        color: #2b3674;
+        font-size: 2rem;
         margin-bottom: 20px;
+        font-weight: 700;
       }
 
-      /* Kartu setiap buku */
-      .buku-card {
-        background-color: white;
-        padding: 15px;
-        margin: 12px 0;
+      /* Statistics Cards Grid */
+      #ringkasan-statistik {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+
+      .kartu-statistik {
+        background: #ffffff;
+        padding: 16px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #e9edf7;
+      }
+
+      .statistik-angka {
+        font-size: 1.5rem;
+        font-weight: 800;
+        margin-bottom: 4px;
+      }
+
+      .statistik-label {
+        font-size: 0.85rem;
+        color: #707ebe;
+        font-weight: 500;
+      }
+
+      .statistik-biru .statistik-angka {
+        color: #4aa8ff;
+      }
+      .statistik-hijau .statistik-angka {
+        color: #05cd99;
+      }
+      .statistik-merah .statistik-angka {
+        color: #ee5d50;
+      }
+      .statistik-kuning .statistik-angka {
+        color: #ffce20;
+      }
+
+      /* Control Box (Search & Category Buttons) */
+      .area-kontrol {
+        background: #ffffff;
+        padding: 20px;
+        border-radius: 16px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        border: 1px solid #e9edf7;
+      }
+
+      .pencarian-box {
+        position: relative;
+        margin-bottom: 16px;
+      }
+
+      #input-search {
+        width: 100%;
+        padding: 12px 40px 12px 16px;
         border-radius: 10px;
-        border: 1px solid #ccc;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+        border: 1px solid #e2e8f0;
+        font-size: 0.95rem;
+        outline: none;
+        transition: border-color 0.2s;
       }
 
-      /* Judul buku */
-      .nama-buku {
-        margin-top: 0;
-        color: #447ba3;
+      #input-search:focus {
+        border-color: #4aa8ff;
       }
 
-      /* Tombol pinjam */
-      .tombol-pinjam {
-        padding: 8px 14px;
+      #tombol-hapus-search {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
         border: none;
-        border-radius: 6px;
-        background-color: #5c9cca;
-        color: white;
+        background: none;
+        font-size: 1.1rem;
         cursor: pointer;
+        color: #a0aec0;
+        display: none;
       }
 
-      .tombol-pinjam:hover {
-        background-color: #488ab9;
+      #tombol-filter {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
       }
 
-      /* Buku yang sudah dipinjam */
-      .sedang-dipinjam {
-        background-color: #ffe1e1 !important;
-        border: 2px solid #e05555;
+      .tombol-filter {
+        padding: 8px 16px;
+        border: 1px solid #e2e8f0;
+        border-radius: 20px;
+        background-color: #f8fafc;
+        color: #4a5568;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 600;
+        transition: all 0.2s;
       }
 
-      /* Tombol yang sudah tidak bisa digunakan */
-      button:disabled {
-        background-color: #888;
+      .tombol-filter:hover {
+        background-color: #edf2f7;
+      }
+
+      .tombol-filter.aktif {
+        background-color: #4aa8ff;
+        color: #ffffff;
+        border-color: #4aa8ff;
+      }
+
+      #info-jumlah {
+        font-size: 0.9rem;
+        color: #707ebe;
+        margin-bottom: 16px;
+        font-weight: 500;
+      }
+
+      /* Book Grid & Cards */
+      #kontainer-buku {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 20px;
+      }
+
+      .kartu-buku {
+        background-color: #ffffff;
+        padding: 20px;
+        border-radius: 16px;
+        border: 1px solid #e9edf7;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        transition:
+          transform 0.2s,
+          box-shadow 0.2s;
+      }
+
+      .kartu-buku:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+      }
+
+      .kartu-buku.habis {
+        opacity: 0.8;
+      }
+
+      .kartu-buku.favorit {
+        border: 1.5px solid #ee5d50;
+      }
+
+      .kartu-buku.dipilih {
+        border: 2px solid #4aa8ff;
+        box-shadow: 0 0 0 3px rgba(67, 24, 255, 0.15);
+      }
+
+      .kartu-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 6px;
+      }
+
+      .kartu-judul-buku {
+        font-size: 1.1rem;
+        color: #2b3674;
+        margin: 0;
+        font-weight: 700;
+      }
+
+      .tombol-favorit {
+        background: none;
+        border: none;
+        font-size: 1.2rem;
+        cursor: pointer;
+        line-height: 1;
+      }
+
+      .kartu-penulis-buku {
+        color: #707ebe;
+        font-size: 0.9rem;
+        margin-bottom: 14px;
+      }
+
+      .kartu-meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 18px;
+      }
+
+      .badge-kategori {
+        background: #f4f7fe;
+        color: #4aa8ff;
+        padding: 4px 10px;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-weight: 700;
+      }
+
+      .badge-stok-tersedia {
+        background: #e6faf5;
+        color: #05cd99;
+        padding: 4px 10px;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-weight: 700;
+      }
+
+      .badge-stok-habis {
+        background: #feeded;
+        color: #ee5d50;
+        padding: 4px 10px;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-weight: 700;
+      }
+
+      .kartu-rating {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #2b3674;
+        margin-left: auto;
+      }
+
+      .kartu-rating::after {
+        content: " ⭐";
+      }
+
+      .kartu-aksi {
+        display: flex;
+        gap: 10px;
+        margin-top: auto;
+      }
+
+      .tombol-aksi {
+        flex: 1;
+        padding: 10px;
+        border: none;
+        border-radius: 10px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .tombol-pinjam {
+        background-color: #4aa8ff;
         color: white;
+      }
+
+      .tombol-pinjam:hover:not(:disabled) {
+        background-color: #2489e7;
+      }
+
+      .tombol-pinjam:disabled {
+        background-color: #e2e8f0;
+        color: #a0aec0;
         cursor: not-allowed;
       }
 
-      /* Bagian cover */
-      h3 {
-        margin-top: 25px;
+      .tombol-detail {
+        background-color: #f4f7fe;
+        color: #2b3674;
       }
 
-      #gambar-cover {
-        border-radius: 6px;
-        border: 1px solid #ccc;
-        margin-top: 5px;
+      .tombol-detail:hover {
+        background-color: #e2e8f0;
+      }
+
+      /* Search highlight effect */
+      .highlight {
+        background-color: #fff3c4;
+        color: #b7791f;
+        padding: 0 2px;
+        border-radius: 3px;
+      }
+
+      /* Empty State */
+      .pesan-kosong {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 40px 20px;
+        background: #ffffff;
+        border-radius: 16px;
+        border: 1px solid #e9edf7;
+      }
+
+      .pesan-kosong-ikon {
+        font-size: 3rem;
+        display: block;
+        margin-bottom: 12px;
+      }
+
+      .pesan-kosong p {
+        color: #707ebe;
+        font-size: 1rem;
+      }
+
+      /* Detail Modal/Panel */
+      #panel-detail {
+        margin-top: 28px;
+        background-color: #ffffff;
+        padding: 24px;
+        border-radius: 16px;
+        border: 1px solid #e9edf7;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+      }
+
+      #panel-detail h2 {
+        margin-bottom: 12px;
+        color: #2b3674;
+      }
+
+      #panel-detail p {
+        margin-bottom: 8px;
+        color: #4a5568;
+        font-size: 0.95rem;
+      }
+
+      [hidden] {
+        display: none !important;
       }
     </style>
   </head>
 
   <body>
-    <h1 id="nama-perpus">⭐Mini Library</h1>
-    <p id="jumlah-buku">Jumlah Buku: 0</p>
+    <h1 id="nama-perpus">📖 Perpus Mini</h1>
 
-    <div id="koleksi-buku"></div>
+    <!-- 1. Container Ringkasan Statistik -->
+    <div id="ringkasan-statistik"></div>
 
-    <h3>Cover Buku:</h3>
+    <!-- 2. Box Pencarian dan Filter Kategori -->
+    <div class="area-kontrol">
+      <div class="pencarian-box">
+        <input type="text" id="input-search" placeholder="Cari berdasarkan judul atau penulis..." />
+        <button id="tombol-hapus-search">✖</button>
+      </div>
+      <div id="tombol-filter"></div>
+    </div>
 
-    <img id="gambar-cover" src="https://via.placeholder.com/120x150" alt="cover buku" width="120" />
+    <!-- 3. Info Jumlah Buku -->
+    <p id="info-jumlah">Menampilkan 0 buku</p>
+
+    <!-- 4. Grid Koleksi Buku -->
+    <div id="kontainer-buku"></div>
+
+    <!-- 5. Panel Detail Buku -->
+    <div id="panel-detail" hidden></div>
 
     <script src="script.js"></script>
   </body>
